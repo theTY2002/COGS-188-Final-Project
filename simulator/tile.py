@@ -4,7 +4,7 @@ from typing import Literal
 
 class Suit(Enum):
     DOTS = auto()
-    STICKS = auto()
+    BAMBOO = auto()
     NUMBERS = auto()
 
 class Wind(Enum):
@@ -34,7 +34,7 @@ class DragonTile(Tile, Enum):
 class BonusTile(Tile):
     wind: Wind
 
-standard_tiles: set[Tile] = { SuitedTile(suit, i) for suit in Suit for i in range(1, 10) } | { WindTile(wind) for wind in Wind } | set(DragonTile)
-bonus_tiles: set[Tile] = { BonusTile(wind) for wind in Wind }
+STANDARD_TILES: set[Tile] = { SuitedTile(suit, i) for suit in Suit for i in range(1, 10) } | { WindTile(wind) for wind in Wind } | set(DragonTile)
+BONUS_TILES: set[Tile] = { BonusTile(wind) for wind in Wind }
 
-tiles: list[Tile] = list(standard_tiles) * 4 + list(bonus_tiles) * 2
+TILES: list[Tile] = list(STANDARD_TILES) * 4 + list(BONUS_TILES) * 2

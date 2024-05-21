@@ -4,10 +4,10 @@ from enum import Enum, auto
 from simulator.tile import Tile
 
 class MeldType(Enum):
-    Pong = auto()
-    Chow = auto()
-    Kong = auto()
-    Flower = auto()
+    PON = auto()
+    CHI = auto()
+    KAN = auto()
+    FLOWER = auto()
 
 @dataclass(frozen=True)
 class Meld:
