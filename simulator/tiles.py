@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum, auto
+import itertools
 from typing import Literal
+
 
 class Suit(Enum):
     DOTS = auto()
@@ -34,7 +36,8 @@ class DragonTile(Tile, Enum):
 class BonusTile(Tile):
     wind: Wind
 
-STANDARD_TILES: set[Tile] = { SuitedTile(suit, i) for suit in Suit for i in range(1, 10) } | { WindTile(wind) for wind in Wind } | set(DragonTile)
+SUITED_TILES: list[list[Tile]] = [ [ SuitedTile(suit, i) for i in range(1, 10) ] for suit in Suit ]
+STANDARD_TILES: set[Tile] = { WindTile(wind) for wind in Wind } | set(DragonTile) | set(itertools.chain(*SUITED_TILES))
 BONUS_TILES: set[Tile] = { BonusTile(wind) for wind in Wind }
 
 TILES: list[Tile] = list(STANDARD_TILES) * 4 + list(BONUS_TILES) * 2

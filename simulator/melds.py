@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum, auto
 
-from simulator.tile import Tile
+from simulator.tiles import Tile
+
 
 class MeldType(Enum):
     PON = auto()
@@ -13,3 +14,4 @@ class MeldType(Enum):
 class Meld:
     type: MeldType
     tiles: list[Tile]
+    discard: Tile | None
