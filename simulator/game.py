@@ -21,23 +21,39 @@ class Game:
         curr_agent = self.agents[self.state.curr_player]
 
         # Ask it to discard a tile (its action for the turn)
-        self.state.play(curr_agent.choose_discard(
+        self.state.discard(curr_agent.choose_discard(
             self.state.hands[self.state.curr_player],
             self.state.melds,
             self.state.curr_player
         ))
 
         # Ask each agent what meld it would like to make
-        preferred_melds: list[tuple[Agent, Meld]] = []
+        preferred_melds: list[tuple[int, Meld]] = []
         for i, agent in enumerate(self.agents):
+            # The player who just discarded cannot meld
             if agent == curr_agent:
                 continue
-            preferred_melds.append(agent.choose_meld(
-                self.state.available_melds,
+            preferred_melds.append((i, agent.choose_meld(
+                self.state.available_melds(i),
                 self.state.hands[i],
                 self.state.melds,
                 i
-            ))
-        
+            )))
 
+        self.state.draw()
+        kans = self.state.concealed_kans()
         
+        while len(kans) > 0:
+            meld = agent.choose_meld(
+                self.state.available_melds(i),
+                self.state.hands[i],
+                self.state.melds,
+                i
+            )
+
+            # If it chose something, take it and then recalculate
+            if meld:
+                self.state.meld(self.state.curr_player, meld)
+                kans = self.state.concealed_kans()
+            else:
+                break
