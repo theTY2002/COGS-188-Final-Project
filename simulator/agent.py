@@ -5,7 +5,7 @@ from simulator.tiles import Tile
 
 
 class Agent(ABC):
-    @abstractmethod()
+    @abstractmethod
     def choose_discard(self, hand: list[Tile], melds: list[list[Meld]], player: int) -> int:
         """
         Chooses a tile to discard.
@@ -20,7 +20,7 @@ class Agent(ABC):
         """
         pass
         
-    @abstractmethod()
+    @abstractmethod
     def choose_meld(self, available_melds: list[Meld], hand: list[Tile], melds: list[list[Meld]], player: int) -> int | None:
         """
         Chooses a meld to take, if any.

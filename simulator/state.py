@@ -13,7 +13,7 @@ class State:
     melds: list[list[Meld]] = [ [] for _ in players ]
 
     curr_player: int = 0
-    winner: int | None
+    winner: int | None = None
 
     __discarded: Tile
 
@@ -110,9 +110,9 @@ class State:
                     case _:
                         return []
                     
-    def concealed_kans(self, player: int):
+    def concealed_kans(self):
         avail = []
-        counts = tiles_as_counts(self.hands[player])
+        counts = tiles_as_counts(self.hands[self.curr_player])
         for tile in counts:
             if counts[tile] == 4:
                 avail.append(Meld(MeldType.KAN, [tile]*4, None))
@@ -151,7 +151,7 @@ class State:
                     # If we have only one, check if we have a valid run for this tile
                     # There are three cases; two tiles in front, one tile in front and one behind, and two behind
                     # For the behind cases, we decrease the index because this might have changed the previous cases
-                    if counts[SUITED_TILES[suit_index][tile_index+1]] > 0:
+                    if tile_index < 8 and counts[SUITED_TILES[suit_index][tile_index+1]] > 0:
                         if tile_index < 7 and counts[SUITED_TILES[suit_index][tile_index+2]] > 0:
                             counts[SUITED_TILES[suit_index][tile_index]] = 0
                             counts[SUITED_TILES[suit_index][tile_index+1]] -= 1
