@@ -244,6 +244,10 @@ class State:
                 match drawn[i]:
                     case BonusTile(_):
                         self.melds[player].append(Meld(MeldType.FLOWER, [drawn[i]], None))
+
+                        if len(self.wall) == 0:
+                            return None
+
                         drawn[i] = self.wall[-1]
                         del self.wall[-1]
 
