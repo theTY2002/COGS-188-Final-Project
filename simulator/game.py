@@ -25,6 +25,7 @@ class Game:
         self.state.discard(self.agents[self.state.curr_player].choose_discard(
             self.state.hands[self.state.curr_player],
             self.state.melds,
+            self.state.discards,
             self.state.curr_player
         ))
 
@@ -39,6 +40,7 @@ class Game:
                     avail,
                     self.state.hands[i],
                     self.state.melds,
+                    self.state.discards,
                     i
                 )
                 if m:
@@ -81,6 +83,7 @@ class Game:
                 kans,
                 self.state.hands[self.state.curr_player],
                 self.state.melds,
+                self.state.discards,
                 self.state.curr_player
             )
 

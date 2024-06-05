@@ -11,6 +11,7 @@ class State:
     wall: list[Tile]
     hands: list[list[Tile]]
     melds: list[list[Meld]] = [ [] for _ in players ]
+    discards: list[list[Tile]] = [ [] for _ in players ]
 
     curr_player: int = 0
     winner: int | None = None
@@ -27,6 +28,7 @@ class State:
     def discard(self, discard: int):
         # Discard
         self.__discarded = self.hands[self.curr_player][discard]
+        self.discards[self.curr_player].append(self.__discarded)
         del self.hands[self.curr_player][discard]
 
         # Update current player
