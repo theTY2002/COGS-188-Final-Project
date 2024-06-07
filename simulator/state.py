@@ -1,7 +1,7 @@
 import random
 
 from simulator.melds import Meld, MeldType
-from simulator.tiles import OTHER_TILES, SUITED_TILES, BonusTile, Suit, SuitedTile, Tile, BONUS_TILES, TILES
+from simulator.tiles import OTHER_TILES, SUITED_TILES, SeasonTile, FlowerTile, Suit, SuitedTile, Tile, BONUS_TILES, TILES
 from simulator.util import tiles_as_counts
 
 
@@ -242,7 +242,7 @@ class State:
 
             for i in range(len(drawn)):
                 match drawn[i]:
-                    case BonusTile(_):
+                    case SeasonTile() | FlowerTile():
                         self.melds[player].append(Meld(MeldType.FLOWER, [drawn[i]], None))
 
                         if len(self.wall) == 0:

@@ -33,12 +33,16 @@ class DragonTile(Tile, Enum):
     WHITE = auto()
 
 @dataclass(frozen=True)
-class BonusTile(Tile):
+class SeasonTile(Tile):
+    wind: Wind
+
+@dataclass(frozen=True)
+class FlowerTile(Tile):
     wind: Wind
 
 SUITED_TILES: list[list[Tile]] = [ [ SuitedTile(suit, i) for i in range(1, 10) ] for suit in Suit ]
 OTHER_TILES: list[Tile] = [ WindTile(wind) for wind in Wind ] + list(DragonTile)
 STANDARD_TILES: list[Tile] = list(itertools.chain(*SUITED_TILES)) + OTHER_TILES
-BONUS_TILES: list[Tile] = [ BonusTile(wind) for wind in Wind ]
+BONUS_TILES: list[Tile] = [ SeasonTile(wind) for wind in Wind ] + [ FlowerTile(wind) for wind in Wind ]
 
-TILES: list[Tile] = STANDARD_TILES * 4 + BONUS_TILES * 2
+TILES: list[Tile] = STANDARD_TILES * 4 + BONUS_TILES
