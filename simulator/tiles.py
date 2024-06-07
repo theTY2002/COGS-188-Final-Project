@@ -21,7 +21,7 @@ class Tile:
 @dataclass(frozen=True)
 class SuitedTile(Tile):
     suit: Suit
-    value: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9]
+    rank: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 @dataclass(frozen=True)
 class WindTile(Tile):

@@ -76,7 +76,7 @@ class State:
         counts = tiles_as_counts(self.hands[player])
 
         match self.__discarded:
-            case SuitedTile(suit, value):
+            case SuitedTile(suit, rank):
                 avail = []
 
                 # Check for sets
@@ -88,7 +88,7 @@ class State:
                         avail.append(Meld(MeldType.KAN, [self.__discarded] * 3, self.__discarded))
                     
                 # Check for chi
-                candidates = [ SuitedTile(suit, value + i) for i in range(-2, 3) ]
+                candidates = [ SuitedTile(suit, rank + i) for i in range(-2, 3) ]
                 if counts[candidates[3]] > 0:
                     if counts[candidates[4]] > 0:
                         avail.append(Meld(MeldType.CHI, [candidates[3], candidates[4]], candidates[2]))
