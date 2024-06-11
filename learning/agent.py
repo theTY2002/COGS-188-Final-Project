@@ -61,9 +61,9 @@ class DQNAgent(Agent):
         self.epsilon = EPSILON
         #self.seed = random.seed(seed)
         self.score = 0
-        self.discard_network = MahjongNetwork(DISCARD_CHANNELS, DISCARD_OUTPUT, SEED)
+        self.discard_network = MahjongNetwork(DISCARD_CHANNELS, DISCARD_OUTPUT, SEED).to(device)
         self.discard_trainer = DQNTrainer(self.discard_network, BUFFER_SIZE, BATCH_SIZE, LR, GAMMA, EPSILON, SEED)
-        self.meld_network = MahjongNetwork(MELD_CHANNELS, MELD_OUTPUT, SEED)
+        self.meld_network = MahjongNetwork(MELD_CHANNELS, MELD_OUTPUT, SEED).to(device)
         self.meld_trainer = DQNTrainer(self.meld_network, BUFFER_SIZE, BATCH_SIZE, LR, GAMMA, EPSILON, SEED)
 
         self.discard_state = torch.zeros(34, 4, 9)
@@ -79,7 +79,7 @@ class DQNAgent(Agent):
         self.discard_trainer.end_learn(self.discard_state, reward)
         self.meld_trainer.end_learn(self.meld_state, reward)
 
-    def discard_reward(hand: list[Tile], action: int):
+    def discard_reward(self, hand: list[Tile], action: int):
         discard_tile = index_to_tile(action)
         counts = tiles_as_counts(hand.remove(discard_tile))
 
@@ -139,13 +139,13 @@ class DQNAgent(Agent):
         meld_tensors = []
 
         for player_melds in ordered_melds:
+            player_tiles = []
             for meld in player_melds:
-                player_tiles = list[Tile]
                 if meld.discard != None:
                     meld_tiles = meld.tiles + [meld.discard]
                 else:
                     meld_tiles = meld.tiles
-                player_tiles.append(meld_tiles)
+                player_tiles = player_tiles + [meld_tiles]
             meld_tensor = tiles_to_tensor(player_tiles)
             meld_tensors.append(meld_tensor)
             #tensor = torch.stack((tensor, meld_tensor))
@@ -173,9 +173,11 @@ class DQNAgent(Agent):
         print(self.score)
         return action
 
-    def meld_reward(hand, action_meld):
+    def meld_reward(self, hand, action_meld):
         reward = 0
         meld_tile = action_meld[0]
+        if hand.remove(meld_tile) == None:
+            return reward
         counts = tiles_as_counts(hand.remove(meld_tile))
 
         match meld_tile:
@@ -284,8 +286,8 @@ class DQNAgent(Agent):
         meld_tensors = []
 
         for player_melds in ordered_melds:
+            player_tiles = []
             for meld in player_melds:
-                player_tiles = []
                 if meld.discard != None:
                     meld_tiles = meld.tiles + [meld.discard]
                 else:
@@ -317,7 +319,7 @@ class DQNAgent(Agent):
 
                 tensor = torch.stack(([hand_tensor] + meld_tensors + discard_tensors + [stolen_meld_tensor])).to(device)
                 next_state = tensor.to(device)
-                q_values = self.meld_trainer.act(next_state)
+                q_values = self.meld_trainer.act_meld(next_state).squeeze(0)
 
                 if (q_values[0] > max_q):
                     max_q = q_values[0]

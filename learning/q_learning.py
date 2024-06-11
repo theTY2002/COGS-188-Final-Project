@@ -68,7 +68,7 @@ class DQNTrainer:
         state = state.float().unsqueeze(0).to(device)
         self.qnetwork_local.eval()
         with torch.no_grad():
-            action_values = self.qnetwork_local(state)
+            action_values = self.qnetwork_local(state).detach().cpu().numpy()
         self.qnetwork_local.train()
 
         #Epsilon-greedy
@@ -78,7 +78,7 @@ class DQNTrainer:
         return np.random.choice(self.action_size, p=weights)
     
     def act_meld(self, state: torch.Tensor):
-        state = torch.from_numpy(state).float().unsqueeze(0).to(device)
+        state = state.float().unsqueeze(0).to(device)
         self.qnetwork_local.eval()
         with torch.no_grad():
             action_values = self.qnetwork_local(state)

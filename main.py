@@ -6,4 +6,7 @@ agent = DQNAgent(True, 0)
 game = Game([RandomAgent(), RandomAgent(), RandomAgent(), agent])
 while (game.step() == False):
     continue
-agent.end_game()
+if game.winner == 3:
+    agent.end_game(100)
+else:
+    agent.end_game(0)
