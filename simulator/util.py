@@ -22,6 +22,8 @@ def tile_to_index(tile: Tile) -> int:
         
 def tiles_to_tensor(tiles: list[Tile]) -> torch.Tensor:
     tensor = torch.zeros(34, 4)
+    if (len(tiles) == 0):
+        return tensor
     counts = tiles_as_counts(tiles)
     for tile in counts:
         index = tile_to_index(tile)
@@ -31,7 +33,7 @@ def tiles_to_tensor(tiles: list[Tile]) -> torch.Tensor:
 def index_to_tile(index: int):
     if 0 <= index <= 26:
         rank = index % 9 + 1
-        suit = (index - rank) / 9
+        suit = Suit(int((index - (index % 9)) / 9) + 1)
         return SuitedTile(suit, rank)
     elif 27 <= index <= 30:
         return WindTile(index - 26)

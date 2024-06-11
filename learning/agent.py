@@ -81,7 +81,9 @@ class DQNAgent(Agent):
 
     def discard_reward(self, hand: list[Tile], action: int):
         discard_tile = index_to_tile(action)
-        counts = tiles_as_counts(hand.remove(discard_tile))
+        hand_copy = hand.copy()
+        hand_copy.remove(discard_tile)
+        counts = tiles_as_counts(hand_copy)
 
         match discard_tile:
             case SuitedTile(suit, rank):
@@ -141,11 +143,14 @@ class DQNAgent(Agent):
         for player_melds in ordered_melds:
             player_tiles = []
             for meld in player_melds:
+                #Skip flowers
+                if meld.type == MeldType.FLOWER:
+                    continue
                 if meld.discard != None:
                     meld_tiles = meld.tiles + [meld.discard]
                 else:
                     meld_tiles = meld.tiles
-                player_tiles = player_tiles + [meld_tiles]
+                player_tiles = player_tiles + meld_tiles
             meld_tensor = tiles_to_tensor(player_tiles)
             meld_tensors.append(meld_tensor)
             #tensor = torch.stack((tensor, meld_tensor))
@@ -160,7 +165,7 @@ class DQNAgent(Agent):
         tensor = torch.stack(([hand_tensor] + meld_tensors + discard_tensors)).to(device)
 
         next_state = tensor.to(device)
-        action = self.discard_trainer.act(next_state)
+        action = self.discard_trainer.act(next_state, hand)
 
         if (self.train):
             reward = self.discard_reward(hand, action)
@@ -171,14 +176,18 @@ class DQNAgent(Agent):
         
         print("Score: ")
         print(self.score)
-        return action
+
+        discard_tile = index_to_tile(action)
+        return hand.index(discard_tile)
 
     def meld_reward(self, hand, action_meld):
         reward = 0
-        meld_tile = action_meld[0]
-        if hand.remove(meld_tile) == None:
+        if (action_meld == None):
             return reward
-        counts = tiles_as_counts(hand.remove(meld_tile))
+        meld_tile = action_meld[0]
+        hand_copy = hand.copy()
+        hand_copy.remove(meld_tile)
+        counts = tiles_as_counts(hand_copy)
 
         match meld_tile:
             case SuitedTile(suit, rank):
@@ -225,7 +234,9 @@ class DQNAgent(Agent):
                 reward += 0
 
         meld_tile = action_meld[1]
-        counts = tiles_as_counts(hand.remove(meld_tile))
+        hand_copy = hand.copy()
+        hand_copy.remove(meld_tile)
+        counts = tiles_as_counts(hand_copy)
 
         match meld_tile:
             case SuitedTile(suit, rank):
@@ -306,10 +317,17 @@ class DQNAgent(Agent):
         #Potential melds
         max_q = -float('inf')
         action_meld = None
-        action_meld_tensor = None
+        action_meld_tensor = torch.zeros(34, 4)
         prob = random.uniform(0, 1)
+
+        
         if (prob < self.epsilon):
-            action_meld = np.random.choice(available_melds + [None])
+            random_meld = np.random.choice(available_melds)
+            stolen_meld_tiles = random_meld.tiles
+            stolen_meld = random_meld.tiles + [random_meld.discard]
+            stolen_meld_tensor = tiles_to_tensor(stolen_meld)
+            action_meld = stolen_meld_tiles
+            action_meld_tensor = stolen_meld_tensor
         else:
             for meld in available_melds:
                 stolen_meld_tiles = meld.tiles
@@ -326,7 +344,7 @@ class DQNAgent(Agent):
                     action_meld = stolen_meld_tiles
                     action_meld_tensor = stolen_meld_tensor
 
-                tensor = tensor[:, :, :9]
+                tensor = tensor[:9, :, :]
 
         if (action_meld == None):
             action = 1

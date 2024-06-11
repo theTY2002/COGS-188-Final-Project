@@ -16,6 +16,8 @@ import os
 import copy
 
 from learning.models import MahjongNetwork
+from simulator.tiles import Tile
+from simulator.util import index_to_tile
 
 device = torch.device("mps")
     
@@ -64,7 +66,7 @@ class DQNTrainer:
             experiences = self.memory.sample()
             self.learn(experiences, self.gamma)
 
-    def act(self, state: torch.Tensor):
+    def act(self, state: torch.Tensor, hand: list[Tile]):
         state = state.float().unsqueeze(0).to(device)
         self.qnetwork_local.eval()
         with torch.no_grad():
@@ -72,10 +74,26 @@ class DQNTrainer:
         self.qnetwork_local.train()
 
         #Epsilon-greedy
-        best = np.argmax(action_values)
-        weights = np.full_like(action_values, self.epsilon / (self.action_size - 1))
+        order = np.flip(np.argsort(action_values))
+
+        best = order[:, 0]
+        weights = np.full_like(action_values, self.epsilon / (self.action_size - 1)).squeeze(0)
         weights[best] = 1 - self.epsilon
-        return np.random.choice(self.action_size, p=weights)
+        
+        action = np.random.choice(self.action_size, p=weights)
+        discard_tile = index_to_tile(action)
+
+        extra_attempts = 1
+        while (discard_tile not in hand):
+            best = order[:, extra_attempts]
+            weights = np.full_like(action_values, self.epsilon / (self.action_size - 1)).squeeze(0)
+            weights[best] = 1 - self.epsilon
+            
+            action = np.random.choice(self.action_size, p=weights)
+            discard_tile = index_to_tile(action)
+            extra_attempts += 1
+
+        return action
     
     def act_meld(self, state: torch.Tensor):
         state = state.float().unsqueeze(0).to(device)
@@ -109,7 +127,8 @@ class DQNTrainer:
     
     def end_learn(self, states, rewards):
         q_targets = rewards
-        q_expected = self.qnetwork_local(states).gather(1, self.memory.memory.pop().action)
+        #Check
+        q_expected = self.qnetwork_local(states).gather(1, self.memory.memory.actions)
 
         loss = F.mse_loss(q_expected, q_targets)
         self.optimizer.zero_grad()
