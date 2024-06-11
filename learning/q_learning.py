@@ -125,10 +125,18 @@ class DQNTrainer:
 
         self.soft_update(self.qnetwork_local, self.qnetwork_target)
     
-    def end_learn(self, states, rewards):
+    def end_step(self, state: torch.Tensor, action: int, reward: float, next_state: torch.Tensor, done: bool):
+        self.memory.add(state, action, reward, next_state, done)
+
+        if len(self.memory) > self.memory.batch_size:
+            experiences = self.memory.sample()
+            self.end_learn(experiences, self.gamma)
+        
+    def end_learn(self, experiences):
+        states, actions, rewards, next_states, dones = experiences
+
         q_targets = rewards
-        #Check
-        q_expected = self.qnetwork_local(states).gather(1, self.memory.memory.actions)
+        q_expected = self.qnetwork_local(states).gather(1, actions)
 
         loss = F.mse_loss(q_expected, q_targets)
         self.optimizer.zero_grad()
