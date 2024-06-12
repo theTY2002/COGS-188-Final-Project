@@ -32,8 +32,8 @@ class ReplayBuffer:
 
     def add(self, state: torch.Tensor, action: int, reward: float, next_state: torch.Tensor, done: bool):
         """Add a new experience to memory."""
-        print("SHAPE: ")
-        print(state.shape)
+        # print("SHAPE: ")
+        # print(state.shape)
         self.memory.append(self.experience(state, action, reward, next_state, done))
 
     def sample(self) -> tuple:
@@ -52,8 +52,12 @@ class ReplayBuffer:
 class DQNTrainer:
     def __init__(self, model: MahjongNetwork, buffer_size: int, batch_size: int, lr: float, gamma: int, epsilon: int, seed: int):
         self.qnetwork_local = model
-        torch.save(self.qnetwork_local, 'network.pth')
-        self.qnetwork_target = torch.load('network.pth')
+        torch.save(self.qnetwork_local.state_dict(), 'network.pth')
+
+        self.qnetwork_target = MahjongNetwork(self.qnetwork_local.input_channels, self.qnetwork_local.output_size, seed).to(device)
+        self.qnetwork_target.load_state_dict(torch.load('network.pth'))
+        self.qnetwork_target.eval()
+
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=lr)
         self.gamma = gamma
         self.epsilon = epsilon
@@ -113,19 +117,19 @@ class DQNTrainer:
 
     def learn(self, experiences):
         states, actions, rewards, next_states, dones = experiences
-
+        # next_states = next_states.to(device)
         action_values = self.qnetwork_target(next_states).detach()
         max_action_values = action_values.max(1)[0].unsqueeze(1)
 
-        q_targets = rewards + (self.gamma * max_action_values * (1 - dones.long()))
-        q_expected = self.qnetwork_local(states).gather(1, actions)
+        q_targets = rewards.unsqueeze(1) + (self.gamma * max_action_values * (1 - dones.unsqueeze(1).long()))
+        q_expected = self.qnetwork_local(states).gather(1, actions.unsqueeze(1))
 
         loss = F.mse_loss(q_expected, q_targets)
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
 
-        self.soft_update(self.qnetwork_local, self.qnetwork_target)
+        self.soft_update()
     
     def end_step(self, state: torch.Tensor, action: int, reward: float, next_state: torch.Tensor, done: bool):
         self.memory.add(state, action, reward, next_state, done)
@@ -137,15 +141,15 @@ class DQNTrainer:
     def end_learn(self, experiences):
         states, actions, rewards, next_states, dones = experiences
 
-        q_targets = rewards
-        q_expected = self.qnetwork_local(states).gather(1, actions)
+        q_targets = rewards.unsqueeze(1)
+        q_expected = self.qnetwork_local(states).gather(1, actions.unsqueeze(1))
 
         loss = F.mse_loss(q_expected, q_targets)
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
 
-        self.soft_update(self.qnetwork_local, self.qnetwork_target)
+        self.soft_update()
     
     def soft_update(self):
         for target_param, local_param in zip(self.qnetwork_target.parameters(), self.qnetwork_local.parameters()):

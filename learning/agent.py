@@ -182,8 +182,8 @@ class DQNAgent(Agent):
         self.discard_state = next_state.detach().cpu()
         self.discard_action = action
 
-        print("Score: ")
-        print(self.score)
+        # print("Score: ")
+        # print(self.score)
 
         discard_tile = index_to_tile(action)
         return hand.index(discard_tile)
@@ -376,6 +376,6 @@ class DQNAgent(Agent):
         self.meld_state = next_state.detach().cpu()
         self.meld_action = action
 
-        print("Score: ")
-        print(self.score)
+        # print("Score: ")
+        # print(self.score)
         return action
