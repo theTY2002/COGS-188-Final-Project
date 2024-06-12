@@ -32,15 +32,17 @@ class ReplayBuffer:
 
     def add(self, state: torch.Tensor, action: int, reward: float, next_state: torch.Tensor, done: bool):
         """Add a new experience to memory."""
+        print("SHAPE: ")
+        print(state.shape)
         self.memory.append(self.experience(state, action, reward, next_state, done))
 
     def sample(self) -> tuple:
         experiences = random.sample(self.memory, k=self.batch_size)
-        states = torch.from_numpy(np.vstack([e.state for e in experiences if e is not None])).float().to(device)
-        actions = torch.from_numpy(np.vstack([e.action for e in experiences if e is not None])).long().to(device)
-        rewards = torch.from_numpy(np.vstack([e.reward for e in experiences if e is not None])).float().to(device)
-        next_states = torch.from_numpy(np.vstack([e.next_state for e in experiences if e is not None])).float().to(device)
-        dones = torch.from_numpy(np.vstack([e.done for e in experiences if e is not None])).bool().to(device)
+        states = torch.from_numpy(np.stack([e.state for e in experiences if e is not None])).float().to(device)
+        actions = torch.from_numpy(np.stack([e.action for e in experiences if e is not None])).long().to(device)
+        rewards = torch.from_numpy(np.stack([e.reward for e in experiences if e is not None])).float().to(device)
+        next_states = torch.from_numpy(np.stack([e.next_state for e in experiences if e is not None])).float().to(device)
+        dones = torch.from_numpy(np.stack([e.done for e in experiences if e is not None])).bool().to(device)
         return (states, actions, rewards, next_states, dones)
     
     def __len__(self) -> int:
@@ -50,8 +52,8 @@ class ReplayBuffer:
 class DQNTrainer:
     def __init__(self, model: MahjongNetwork, buffer_size: int, batch_size: int, lr: float, gamma: int, epsilon: int, seed: int):
         self.qnetwork_local = model
-        torch.save(self.qnetwork_local.state_dict(), 'network.pth')
-        self.qnetwork_target = self.qnetwork_local.load_state_dict(torch.load('network.pth'))
+        torch.save(self.qnetwork_local, 'network.pth')
+        self.qnetwork_target = torch.load('network.pth')
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=lr)
         self.gamma = gamma
         self.epsilon = epsilon
@@ -62,9 +64,9 @@ class DQNTrainer:
     def step(self, state: torch.Tensor, action: int, reward: float, next_state: torch.Tensor, done: bool):
         self.memory.add(state, action, reward, next_state, done)
 
-        if len(self.memory) > self.memory.batch_size:
+        if len(self.memory.memory) > self.memory.batch_size:
             experiences = self.memory.sample()
-            self.learn(experiences, self.gamma)
+            self.learn(experiences)
 
     def act(self, state: torch.Tensor, hand: list[Tile]):
         state = state.float().unsqueeze(0).to(device)
@@ -128,9 +130,9 @@ class DQNTrainer:
     def end_step(self, state: torch.Tensor, action: int, reward: float, next_state: torch.Tensor, done: bool):
         self.memory.add(state, action, reward, next_state, done)
 
-        if len(self.memory) > self.memory.batch_size:
+        if len(self.memory.memory) > self.memory.batch_size:
             experiences = self.memory.sample()
-            self.end_learn(experiences, self.gamma)
+            self.end_learn(experiences)
         
     def end_learn(self, experiences):
         states, actions, rewards, next_states, dones = experiences

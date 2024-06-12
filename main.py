@@ -4,13 +4,27 @@ from learning.agent import DQNAgent
 from simulator.game import Game
 
 agent = DQNAgent(True, 0)
-game = Game([RandomAgent(), RandomAgent(), RandomAgent(), agent])
-while (game.step() == False):
-    continue
-if game.winner == 3:
-    agent.end_game(100)
-else:
-    agent.end_game(0)
+# game = Game([RandomAgent(), RandomAgent(), RandomAgent(), agent])
 
-torch.save(agent.discard_trainer.qnetwork_local.state_dict(), 'discard_checkpoint.pth')
-torch.save(agent.meld_trainer.qnetwork_local.state_dict(), 'meld_checkpoint.pth')
+# while (game.step() == False):
+#     continue
+# if game.winner == 3:
+#     agent.end_game(100)
+# else:
+#     agent.end_game(0)
+
+# torch.save(agent.discard_trainer.qnetwork_local.state_dict(), 'discard_checkpoint.pth')
+# torch.save(agent.meld_trainer.qnetwork_local.state_dict(), 'meld_checkpoint.pth')
+
+agent.discard_trainer.qnetwork_local.load_state_dict(torch.load('discard_checkpoint.pth'))
+agent.meld_trainer.qnetwork_local.load_state_dict(torch.load('meld_checkpoint.pth'))
+
+for i in range(100):
+    game = Game([RandomAgent(), RandomAgent(), RandomAgent(), agent])
+
+    while (game.step() == False):
+        continue
+    if game.winner == 3:
+        agent.end_game(100)
+    else:
+        agent.end_game(0)

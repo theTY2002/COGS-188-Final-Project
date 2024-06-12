@@ -66,10 +66,10 @@ class DQNAgent(Agent):
         self.meld_network = MahjongNetwork(MELD_CHANNELS, MELD_OUTPUT, SEED).to(device)
         self.meld_trainer = DQNTrainer(self.meld_network, BUFFER_SIZE, BATCH_SIZE, LR, GAMMA, EPSILON, SEED)
 
-        self.discard_state = torch.zeros(34, 4, 9)
+        self.discard_state = torch.zeros(9, 34, 4)
         self.discard_last_reward = 0
         self.discard_action = 0
-        self.meld_state = torch.zeros(34, 4, 10)
+        self.meld_state = torch.zeros(10, 34, 4)
         self.meld_last_reward = 0
         self.meld_action = 0
 
@@ -80,8 +80,8 @@ class DQNAgent(Agent):
         # self.memory = ReplayBuffer(action_size, buffer_size=100000, batch_size=64, seed=seed)
 
     def end_game(self, reward):
-        self.discard_trainer.end_step(self.discard_state, self.discard_action, reward, torch.zeros(34, 4, 9), True)
-        self.meld_trainer.end_step(self.meld_state, self.meld_state, reward, torch.zeros(34, 4, 10), True)
+        self.discard_trainer.end_step(self.discard_state, self.discard_action, reward, torch.zeros(9, 34, 4), True)
+        self.meld_trainer.end_step(self.meld_state, self.meld_action, reward, torch.zeros(10, 34, 4), True)
 
     def discard_reward(self, hand: list[Tile], action: int):
         if (len(hand) == 0):
@@ -159,14 +159,12 @@ class DQNAgent(Agent):
                 player_tiles = player_tiles + meld_tiles
             meld_tensor = tiles_to_tensor(player_tiles)
             meld_tensors.append(meld_tensor)
-            #tensor = torch.stack((tensor, meld_tensor))
 
         discard_tensors = []
         for player_discards in ordered_discards:
             discard_tensor = tiles_to_tensor(player_discards)
             discard_tensors.append(discard_tensor)
 
-            #tensor = torch.stack((tensor, discard_tensor))
 
         tensor = torch.stack(([hand_tensor] + meld_tensors + discard_tensors)).to(device)
 
@@ -175,13 +173,13 @@ class DQNAgent(Agent):
         #Train before taking next action
         if (self.train):
             done = False
-            self.discard_trainer.step(self.discard_state, self.discard_action, self.discard_last_reward, next_state, done)
+            self.discard_trainer.step(self.discard_state, self.discard_action, self.discard_last_reward, next_state.detach().cpu(), done)
             self.score += self.discard_last_reward
 
         # self.discard_hand = hand
         action = self.discard_trainer.act(next_state, hand)
         self.discard_last_reward = self.discard_reward(hand, action)
-        self.discard_state = next_state
+        self.discard_state = next_state.detach().cpu()
         self.discard_action = action
 
         print("Score: ")
@@ -364,7 +362,7 @@ class DQNAgent(Agent):
 
         if (self.train):
             done = False
-            self.meld_trainer.step(self.meld_state, self.meld_action, self.meld_last_reward, next_state, done)
+            self.meld_trainer.step(self.meld_state, self.meld_action, self.meld_last_reward, next_state.detach().cpu(), done)
             self.score += self.meld_last_reward
 
         # self.meld_hand = hand
@@ -375,7 +373,7 @@ class DQNAgent(Agent):
         else:
             action = 0
         self.meld_last_reward = self.meld_reward(hand, action_meld)
-        self.meld_state = next_state
+        self.meld_state = next_state.detach().cpu()
         self.meld_action = action
 
         print("Score: ")
