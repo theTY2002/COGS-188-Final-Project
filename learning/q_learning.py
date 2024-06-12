@@ -136,20 +136,20 @@ class DQNTrainer:
 
         if len(self.memory.memory) > self.memory.batch_size:
             experiences = self.memory.sample()
-            self.end_learn(experiences)
+            self.learn(experiences)
         
-    def end_learn(self, experiences):
-        states, actions, rewards, next_states, dones = experiences
+    # def end_learn(self, experiences):
+    #     states, actions, rewards, next_states, dones = experiences
 
-        q_targets = rewards.unsqueeze(1)
-        q_expected = self.qnetwork_local(states).gather(1, actions.unsqueeze(1))
+    #     q_targets = rewards.unsqueeze(1)
+    #     q_expected = self.qnetwork_local(states).gather(1, actions.unsqueeze(1))
 
-        loss = F.mse_loss(q_expected, q_targets)
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+    #     loss = F.mse_loss(q_expected, q_targets)
+    #     self.optimizer.zero_grad()
+    #     loss.backward()
+    #     self.optimizer.step()
 
-        self.soft_update()
+    #     self.soft_update()
     
     def soft_update(self):
         for target_param, local_param in zip(self.qnetwork_target.parameters(), self.qnetwork_local.parameters()):
