@@ -14,12 +14,13 @@ DISCARD_OUTPUT = 34
 MELD_CHANNELS = 10
 MELD_OUTPUT = 2
 SEED = 0
+TRAIN = False
 
 discard_model = MahjongNetwork(DISCARD_CHANNELS, DISCARD_OUTPUT, SEED)
 meld_model = MahjongNetwork(MELD_CHANNELS, MELD_OUTPUT, SEED)
 
-agent1 = DQNAgent(True, discard_model=discard_model, meld_model=meld_model, seed=0)
-agent2 = DQNAgent(True, discard_model=discard_model, meld_model=meld_model, seed=0)
+agent1 = DQNAgent(TRAIN, discard_model=discard_model, meld_model=meld_model, seed=0)
+agent2 = DQNAgent(TRAIN, discard_model=discard_model, meld_model=meld_model, seed=0)
 # game = Game([RandomAgent(), RandomAgent(), RandomAgent(), agent])
 
 # while (game.step() == False):
@@ -29,19 +30,26 @@ agent2 = DQNAgent(True, discard_model=discard_model, meld_model=meld_model, seed
 # else:
 #     agent.end_game(0)
 
-# agent1.discard_trainer.qnetwork_local.load_state_dict(torch.load('discard_checkpoint.pth'))
-# agent1.meld_trainer.qnetwork_local.load_state_dict(torch.load('meld_checkpoint.pth'))
-# agent2.discard_trainer.qnetwork_local.load_state_dict(torch.load('discard_checkpoint.pth'))
-# agent2.meld_trainer.qnetwork_local.load_state_dict(torch.load('meld_checkpoint.pth'))
+agent1.discard_trainer.qnetwork_local.load_state_dict(torch.load('discard_checkpoint.pth'))
+agent1.discard_trainer.qnetwork_target.load_state_dict(torch.load('discard_checkpoint.pth'))
+
+agent1.meld_trainer.qnetwork_local.load_state_dict(torch.load('meld_checkpoint.pth'))
+agent1.meld_trainer.qnetwork_target.load_state_dict(torch.load('meld_checkpoint.pth'))
+
+agent2.discard_trainer.qnetwork_local.load_state_dict(torch.load('discard_checkpoint.pth'))
+agent2.meld_trainer.qnetwork_local.load_state_dict(torch.load('meld_checkpoint.pth'))
+
+agent2.discard_trainer.qnetwork_target.load_state_dict(torch.load('discard_checkpoint.pth'))
+agent2.meld_trainer.qnetwork_target.load_state_dict(torch.load('meld_checkpoint.pth'))
 
 winrate = 0.0
 average_steps = []
 average_scores = []
 
 
-myfile = open("data.csv", 'a', newline='')
+myfile = open("test-data.csv", 'w', newline='')
 wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-#wr.writerow(["Episode", "Steps", "Wins", "Scores"])
+wr.writerow(["Episode", "Steps", "Wins", "Scores"])
 
 steps_window = deque(maxlen=100)
 wins_window = deque(maxlen=100)
@@ -76,10 +84,11 @@ for i in range(2000):
     scores_window.append(max(agent1.score, agent2.score))
 
     print(f'\rEpisode {i}\nAverage Steps: {np.mean(steps_window)} \nAverage Wins: {np.mean(wins_window)} \nAverage Score: {np.mean(scores_window)} \n', end="")
-    if i % 100 == 0:
-        torch.save(agent1.discard_trainer.qnetwork_local.state_dict(), 'discard_checkpoint.pth')
-        torch.save(agent1.meld_trainer.qnetwork_local.state_dict(), 'meld_checkpoint.pth')
+    # if i % 100 == 0:
+        # torch.save(agent1.discard_trainer.qnetwork_local.state_dict(), 'discard_checkpoint.pth')
+        # torch.save(agent1.meld_trainer.qnetwork_local.state_dict(), 'meld_checkpoint.pth')
 
     wr.writerow([i, np.mean(steps_window), np.mean(wins_window), np.mean(scores_window)])
+    myfile.flush()
 
 myfile.close()

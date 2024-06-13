@@ -7,7 +7,7 @@ from simulator.state import State
 class Game:
     state: State
     agents: list[Agent]
-    winner: int | None = None
+    winner: int | None
 
     def __init__(self, agents: list[Agent]):
         # Save a copy of the players
@@ -16,6 +16,8 @@ class Game:
 
         # Generate the starting state
         self.state = State()
+
+        self.winner = None
 
     def step(self) -> bool:
         if self.winner:
@@ -88,8 +90,8 @@ class Game:
             )
 
             # If it chose something, take it and then recalculate
-            if meld:
-                self.state.meld(self.state.curr_player, meld)
+            if meld != None:
+                self.state.meld(self.state.curr_player, kans[meld])
 
                 # Return done if we have a winner (have to recheck after meld)
                 if self.state.winner:

@@ -28,7 +28,7 @@ BATCH_SIZE = 64
 LR = 1e-4
 GAMMA = 0.99
 TAU = 0.01
-EPSILON = 0.1
+EPSILON = 0.0
 SEED = 0
 
 #Discard Model
@@ -177,13 +177,13 @@ class DQNAgent(Agent):
         if (self.train):
             done = False
             self.discard_trainer.step(self.discard_state, self.discard_action, self.discard_last_reward, next_state.detach().cpu(), done)
-            self.score += self.discard_last_reward
 
         # self.discard_hand = hand
         action = self.discard_trainer.act(next_state, hand)
         self.discard_last_reward = self.discard_reward(hand, action)
         self.discard_state = next_state.detach().cpu()
         self.discard_action = action
+        self.score += self.discard_last_reward
 
         # print("Score: ")
         # print(self.score)
@@ -362,11 +362,11 @@ class DQNAgent(Agent):
         if (self.train):
             for i, state in enumerate(self.meld_state):
                 self.meld_trainer.step(state, 0 if i == self.meld_action else 1, self.meld_last_reward, next_state.detach().cpu(), False)
-            self.score += self.meld_last_reward
         
         self.meld_last_reward = self.meld_reward(hand, action_meld)
         self.meld_state = avail_meld_tensors
         self.meld_action = action
+        self.score += self.meld_last_reward
 
         # print("Score: ")
         # print(self.score)

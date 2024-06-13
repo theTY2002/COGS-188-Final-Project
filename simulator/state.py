@@ -10,8 +10,8 @@ class State:
 
     wall: list[Tile]
     hands: list[list[Tile]]
-    melds: list[list[Meld]] = [ [] for _ in players ]
-    discards: list[list[Tile]] = [ [] for _ in players ]
+    melds: list[list[Meld]]
+    discards: list[list[Tile]]
 
     curr_player: int = 0
     winner: int | None = None
@@ -21,6 +21,8 @@ class State:
     def __init__(self):
         # Create the wall as a permutation of the tiles
         self.wall = random.sample(TILES, len(TILES))
+        self.melds = [ [] for _ in self.players ]
+        self.discards = [ [] for _ in self.players ]
 
         self.hands = [ self.__draw(p, 13) for p in self.players ]
         self.hands[self.curr_player].append(self.__draw(self.curr_player))
