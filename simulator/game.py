@@ -43,7 +43,7 @@ class Game:
                     self.state.discards,
                     i
                 )
-                if m:
+                if m != None:
                     preferred_melds.append((i, avail[m]))
 
         # If any melds were proposed, select the prioritized one

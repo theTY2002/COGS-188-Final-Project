@@ -23,10 +23,11 @@ DISCARD_CHANNELS = 9
 DISCARD_OUTPUT = 34
 MELD_CHANNELS = 10
 MELD_OUTPUT = 2
-BUFFER_SIZE = 100000
+BUFFER_SIZE = int(1e5)
 BATCH_SIZE = 64
-LR = 0.0005
+LR = 1e-4
 GAMMA = 0.99
+TAU = 0.01
 EPSILON = 0.1
 SEED = 0
 
@@ -56,20 +57,20 @@ SEED = 0
 # Choose highest probability
 
 class DQNAgent(Agent):
-    def __init__(self, train: bool, seed: int):
+    def __init__(self, train: bool, discard_model: MahjongNetwork, meld_model: MahjongNetwork, seed: int):
         self.train = train
         self.epsilon = EPSILON
         #self.seed = random.seed(seed)
         self.score = 0
-        self.discard_network = MahjongNetwork(DISCARD_CHANNELS, DISCARD_OUTPUT, SEED).to(device)
-        self.discard_trainer = DQNTrainer(self.discard_network, BUFFER_SIZE, BATCH_SIZE, LR, GAMMA, EPSILON, SEED)
-        self.meld_network = MahjongNetwork(MELD_CHANNELS, MELD_OUTPUT, SEED).to(device)
-        self.meld_trainer = DQNTrainer(self.meld_network, BUFFER_SIZE, BATCH_SIZE, LR, GAMMA, EPSILON, SEED)
+        self.discard_network = discard_model.to(device)
+        self.discard_trainer = DQNTrainer(self.discard_network, BUFFER_SIZE, BATCH_SIZE, LR, GAMMA, TAU, EPSILON, SEED)
+        self.meld_network = meld_model.to(device)
+        self.meld_trainer = DQNTrainer(self.meld_network, BUFFER_SIZE, BATCH_SIZE, LR, GAMMA, TAU, EPSILON, SEED)
 
         self.discard_state = torch.zeros(9, 34, 4)
         self.discard_last_reward = 0
         self.discard_action = 0
-        self.meld_state = torch.zeros(10, 34, 4)
+        self.meld_state = []
         self.meld_last_reward = 0
         self.meld_action = 0
 
@@ -81,7 +82,11 @@ class DQNAgent(Agent):
 
     def end_game(self, reward):
         self.discard_trainer.end_step(self.discard_state, self.discard_action, reward, torch.zeros(9, 34, 4), True)
-        self.meld_trainer.end_step(self.meld_state, self.meld_action, reward, torch.zeros(10, 34, 4), True)
+        self.score += self.discard_last_reward
+        for i, state in enumerate(self.meld_state):
+                self.meld_trainer.step(state, 0 if i == self.meld_action else 1, reward, torch.zeros(10, 34, 4), True)
+        self.score += self.meld_last_reward
+        self.score += reward
 
     def discard_reward(self, hand: list[Tile], action: int):
         if (len(hand) == 0):
@@ -129,11 +134,9 @@ class DQNAgent(Agent):
         
         match (len(avail)):
             case 0:
-                return 3
-            case 1:
-                return 1
+                return 5
             case _:
-                return 0
+                return -1
 
     def choose_discard(self, hand: list[Tile], melds: list[list[Meld]], discards: list[list[Tile]], player: int) -> int:
         # tensor = torch.empty(34, 4)
@@ -235,11 +238,9 @@ class DQNAgent(Agent):
             
         match (len(avail)):
             case 0:
-                reward += 3
-            case 1:
-                reward += 1
+                reward += 5
             case _:
-                reward += 0
+                reward += -1
 
         meld_tile = action_meld[1]
         hand_copy = hand.copy()
@@ -284,21 +285,16 @@ class DQNAgent(Agent):
             
         match (len(avail)):
             case 0:
-                reward += 3
-            case 1:
-                reward += 1
+                reward += 5
             case _:
-                reward += 0
+                reward += -1
 
         return reward
 
     def choose_meld(self, available_melds: list[Meld], hand: list[Tile], melds: list[list[Meld]], discards: list[list[Tile]], player: int) -> int | None:
-        #tensor = torch.empty(34, 4)
-
         #To make this easier on myself, I'm stacking the stolen tile and possible meld at the bottom
 
         hand_tensor = tiles_to_tensor(hand)
-        #tensor = hand_tensor
 
         ordered_melds = melds[player:] + melds[:player]
         ordered_discards = discards[player:] + discards[:player]
@@ -312,7 +308,7 @@ class DQNAgent(Agent):
                     meld_tiles = meld.tiles + [meld.discard]
                 else:
                     meld_tiles = meld.tiles
-                player_tiles = player_tiles + meld_tiles
+                player_tiles.extend(meld_tiles)
             meld_tensor = tiles_to_tensor(player_tiles)
             meld_tensors.append(meld_tensor)
             #tensor = torch.stack((tensor, meld_tensor))
@@ -326,54 +322,50 @@ class DQNAgent(Agent):
         #Potential melds
         max_q = -float('inf')
         action_meld = None
-        action_meld_tensor = torch.zeros(34, 4)
+        action_meld_index = None
         prob = random.uniform(0, 1)
 
-        
-        if (prob < self.epsilon):
-            random_meld = np.random.choice(available_melds)
-            stolen_meld_tiles = random_meld.tiles
-            stolen_meld = random_meld.tiles + [random_meld.discard]
+        avail_meld_tensors = []
+        for meld in available_melds:
+            stolen_meld = meld.tiles + [meld.discard]
             stolen_meld_tensor = tiles_to_tensor(stolen_meld)
-            action_meld = stolen_meld_tiles
-            action_meld_tensor = stolen_meld_tensor
-        else:
-            for meld in available_melds:
-                stolen_meld_tiles = meld.tiles
-                stolen_meld = meld.tiles + [meld.discard]
-                stolen_meld_tensor = tiles_to_tensor(stolen_meld)
-                #tensor = torch.stack((tensor, stolen_meld_tensor))
 
-                tensor = torch.stack(([hand_tensor] + meld_tensors + discard_tensors + [stolen_meld_tensor])).to(device)
-                next_state = tensor.to(device)
+            tensor = torch.stack(([hand_tensor] + meld_tensors + discard_tensors + [stolen_meld_tensor])).to(device)
+            next_state = tensor.to(device)
+            avail_meld_tensors.append(next_state)
+
+        if (prob < self.epsilon):
+            action_meld_index = np.random.choice(len(available_melds))
+            random_meld = available_melds[action_meld_index]
+            action_meld = random_meld.tiles
+            stolen_meld = random_meld.tiles + [random_meld.discard]
+        else:
+            for i, meld in enumerate(available_melds):
+                next_state = avail_meld_tensors[i]
 
                 q_values = self.meld_trainer.act_meld(next_state).squeeze(0)
 
-                if (q_values[0] > max_q):
+                # If Yes > No and Yes > current max q
+                if (q_values[0] > q_values[1]) and (q_values[0] > max_q):
                     max_q = q_values[0]
-                    action_meld = stolen_meld_tiles
-                    action_meld_tensor = stolen_meld_tensor
-
-                tensor = tensor[:9, :, :]
-
-        #Put the optimal move back in the state
-        tensor = torch.stack(([hand_tensor] + meld_tensors + discard_tensors + [action_meld_tensor])).to(device)
-        next_state = tensor
-
-        if (self.train):
-            done = False
-            self.meld_trainer.step(self.meld_state, self.meld_action, self.meld_last_reward, next_state.detach().cpu(), done)
-            self.score += self.meld_last_reward
-
-        # self.meld_hand = hand
-        # self.action_meld = action_meld
+                    action_meld_index = i
+                    action_meld = meld.tiles
 
         if (action_meld == None):
-            action = 1
+            action = None
+            next_state = avail_meld_tensors[0]
         else:
-            action = 0
+            action = action_meld_index
+            #Put the optimal move back in the state
+            next_state = avail_meld_tensors[action_meld_index]
+
+        if (self.train):
+            for i, state in enumerate(self.meld_state):
+                self.meld_trainer.step(state, 0 if i == self.meld_action else 1, self.meld_last_reward, next_state.detach().cpu(), False)
+            self.score += self.meld_last_reward
+        
         self.meld_last_reward = self.meld_reward(hand, action_meld)
-        self.meld_state = next_state.detach().cpu()
+        self.meld_state = avail_meld_tensors
         self.meld_action = action
 
         # print("Score: ")

@@ -36,6 +36,6 @@ def index_to_tile(index: int):
         suit = Suit(int((index - (index % 9)) / 9) + 1)
         return SuitedTile(suit, rank)
     elif 27 <= index <= 30:
-        return WindTile(index - 26)
+        return WindTile(Wind(index - 26))
     else:
         return DragonTile(index - 30)

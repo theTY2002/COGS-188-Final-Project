@@ -17,7 +17,7 @@ import copy
 
 from learning.models import MahjongNetwork
 from simulator.tiles import Tile
-from simulator.util import index_to_tile
+from simulator.util import index_to_tile, tile_to_index
 
 device = torch.device("mps")
     
@@ -38,11 +38,11 @@ class ReplayBuffer:
 
     def sample(self) -> tuple:
         experiences = random.sample(self.memory, k=self.batch_size)
-        states = torch.from_numpy(np.stack([e.state for e in experiences if e is not None])).float().to(device)
-        actions = torch.from_numpy(np.stack([e.action for e in experiences if e is not None])).long().to(device)
-        rewards = torch.from_numpy(np.stack([e.reward for e in experiences if e is not None])).float().to(device)
-        next_states = torch.from_numpy(np.stack([e.next_state for e in experiences if e is not None])).float().to(device)
-        dones = torch.from_numpy(np.stack([e.done for e in experiences if e is not None])).bool().to(device)
+        states = torch.stack([e.state for e in experiences if e is not None]).float().to(device)
+        actions = torch.tensor([e.action for e in experiences if e is not None]).long().to(device)
+        rewards = torch.tensor([e.reward for e in experiences if e is not None]).float().to(device)
+        next_states = torch.stack([e.next_state for e in experiences if e is not None]).float().to(device)
+        dones = torch.tensor([e.done for e in experiences if e is not None]).bool().to(device)
         return (states, actions, rewards, next_states, dones)
     
     def __len__(self) -> int:
@@ -50,7 +50,7 @@ class ReplayBuffer:
         return len(self.memory)
 
 class DQNTrainer:
-    def __init__(self, model: MahjongNetwork, buffer_size: int, batch_size: int, lr: float, gamma: int, epsilon: int, seed: int):
+    def __init__(self, model: MahjongNetwork, buffer_size: int, batch_size: int, lr: float, gamma: int, tau: int, epsilon: int, seed: int):
         self.qnetwork_local = model
         torch.save(self.qnetwork_local.state_dict(), 'network.pth')
 
@@ -60,6 +60,7 @@ class DQNTrainer:
 
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=lr)
         self.gamma = gamma
+        self.tau = tau
         self.epsilon = epsilon
         self.action_size = model.output_size
 
@@ -80,22 +81,15 @@ class DQNTrainer:
         self.qnetwork_local.train()
 
         #Epsilon-greedy
+        if np.random.rand() < self.epsilon:
+            return tile_to_index(np.random.choice(hand))
+
         order = np.flip(np.argsort(action_values))
 
-        best = order[:, 0]
-        weights = np.full_like(action_values, self.epsilon / (self.action_size - 1)).squeeze(0)
-        weights[best] = 1 - self.epsilon
-        
-        action = np.random.choice(self.action_size, p=weights)
-        discard_tile = index_to_tile(action)
-
-        extra_attempts = 1
+        extra_attempts = 0
+        discard_tile = None
         while (discard_tile not in hand):
-            best = order[:, extra_attempts]
-            weights = np.full_like(action_values, self.epsilon / (self.action_size - 1)).squeeze(0)
-            weights[best] = 1 - self.epsilon
-            
-            action = np.random.choice(self.action_size, p=weights)
+            action = order[0, extra_attempts]
             discard_tile = index_to_tile(action)
             extra_attempts += 1
 
@@ -153,4 +147,4 @@ class DQNTrainer:
     
     def soft_update(self):
         for target_param, local_param in zip(self.qnetwork_target.parameters(), self.qnetwork_local.parameters()):
-            target_param.data.copy_(self.gamma*local_param.data + (1.0-self.gamma)*target_param.data)
+            target_param.data.copy_(self.tau*local_param.data + (1.0-self.tau)*target_param.data)
